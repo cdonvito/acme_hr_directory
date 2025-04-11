@@ -48,25 +48,40 @@ async function init() {
   server.listen(port, () => console.log( `listening on port ${port}`));
 }
 
+init();
+
+server.use(express.json());
+server.use(morgan("dev"));
+
 server.get("api/employees", async (req, res, next) => {
   try{
-
+    const SQL = `SELECT * from employees;`;
+    const response = await client.query(SQL);
+    res.send(response.rows);
   }catch (error) {
-
+    next(error);
   }
 });
 
 server.get("api/departments", async (req, res, next) => {
   try{
-
+    const SQL = `SELECT * from departments;`;
+    const response = await client.query(SQL);
+    res.send(response.rows);
   }catch (error) {
-
+    next(error);
   }
 });
 
 server.post("api/employees", async (req, res, next) => {
   try{
-
+    const { name, department_id} = req.body;
+    const SQL = `INSERT INTO employees(name, department_id) VALUES($1, $2) RETURNING *;`
+    const response = await client.query(SQL, [
+      name,
+      department_id
+    ]);
+    res.send(response.rows[0]);
   }catch (error) {
 
   }
@@ -74,18 +89,28 @@ server.post("api/employees", async (req, res, next) => {
 
 server.delete("api/employees/:id", async (req, res, next) => {
   try{
-
+    const SQL = `DELETE FROM notes WHERE id=$1;`;
+    await client.query(SQL, [req.paramds.id]);
+    res.sendStatus(204);
   }catch (error) {
-
+    next(error);
   }
 });
 
 server.put("api/employees/:id", async (req, res, next) => {
   try{
-
+    const { name, department_id } = req.body;
+    const SQL = `UPDATE employees SET name=$1, department_id=$2, updated_at=now() WHERE id=$4 RETURNING *;`;
+    const response = await client.query(SQL [
+      name,
+      department_id,
+      req.params.id
+    ]);
   }catch (error) {
-
+    next(error);
   }
 });
 
-init();
+server.use((err, req, res) => {
+  res.status(err.statusCode || 500).send({ error: err });
+})
