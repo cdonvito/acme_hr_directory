@@ -12,6 +12,7 @@ async function init() {
   await client.connect();
   console.log("connected to database");
 
+  // create employees and departments tables
   let SQL = `
     DROP TABLE IF EXISTS employees;
     DROP TABLE IF EXISTS departments;
@@ -31,6 +32,7 @@ async function init() {
   await client.query(SQL);
   console.log("tables created");
 
+  // seed data
   SQL = `
     INSERT INTO departments(name) VALUES('Engineering');
     INSERT INTO departments(name) VALUES('Accounting');
@@ -53,7 +55,9 @@ init();
 server.use(express.json());
 server.use(morgan("dev"));
 
-server.get("api/employees", async (req, res, next) => {
+
+// routes
+server.get("/api/employees", async (req, res, next) => {
   try{
     const SQL = `SELECT * from employees;`;
     const response = await client.query(SQL);
@@ -63,7 +67,7 @@ server.get("api/employees", async (req, res, next) => {
   }
 });
 
-server.get("api/departments", async (req, res, next) => {
+server.get("/api/departments", async (req, res, next) => {
   try{
     const SQL = `SELECT * from departments;`;
     const response = await client.query(SQL);
@@ -73,7 +77,7 @@ server.get("api/departments", async (req, res, next) => {
   }
 });
 
-server.post("api/employees", async (req, res, next) => {
+server.post("/api/employees", async (req, res, next) => {
   try{
     const { name, department_id} = req.body;
     const SQL = `INSERT INTO employees(name, department_id) VALUES($1, $2) RETURNING *;`
@@ -83,34 +87,37 @@ server.post("api/employees", async (req, res, next) => {
     ]);
     res.send(response.rows[0]);
   }catch (error) {
-
+    next(error);
   }
 });
 
-server.delete("api/employees/:id", async (req, res, next) => {
+server.delete("/api/employees/:id", async (req, res, next) => {
   try{
-    const SQL = `DELETE FROM notes WHERE id=$1;`;
-    await client.query(SQL, [req.paramds.id]);
+    const SQL = `DELETE FROM employees WHERE id=$1;`;
+    await client.query(SQL, [req.params.id]);
     res.sendStatus(204);
   }catch (error) {
     next(error);
   }
 });
 
-server.put("api/employees/:id", async (req, res, next) => {
+server.put("/api/employees/:id", async (req, res, next) => {
   try{
     const { name, department_id } = req.body;
-    const SQL = `UPDATE employees SET name=$1, department_id=$2, updated_at=now() WHERE id=$4 RETURNING *;`;
-    const response = await client.query(SQL [
+    const SQL = `UPDATE employees SET name=$1, department_id=$2, updated_at=now() WHERE id=$3 RETURNING *;`;
+    const response = await client.query(SQL, [
       name,
       department_id,
       req.params.id
     ]);
+
+    res.send(response.rows[0]);
   }catch (error) {
     next(error);
   }
 });
 
-server.use((err, req, res) => {
+// error handling
+server.use((err, req, res, next) => {
   res.status(err.statusCode || 500).send({ error: err });
 })
